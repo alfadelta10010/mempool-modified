@@ -26,3 +26,6 @@ venv
 *.fish
 # In general, ignore pdfs
 *.pdf
+hardware/build/*
+hardware/verilator-build/*
+results/*

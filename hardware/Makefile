@@ -196,13 +196,13 @@ $(buildpath)/compile.tcl: $(bender) $(config_mk) Makefile $(MEMPOOL_DIR)/Bender.
 sim: clean-dasm compile
 	cd $(buildpath) && \
 	$(questa_cmd) vsim -voptargs=+acc $(questa_args) $(library).$(top_level) -do "set config ${config}" -do ../scripts/questa/run.tcl
-	./scripts/return_status.sh $(buildpath)/transcript
+	./scripts/return_status.sh $(MEMPOOL_DIR)/results/$(app)_transcript.txt
 
 .PHONY: simc
 simc: clean-dasm compile
 	cd $(buildpath) && \
 	$(questa_cmd) vsim -c $(questa_args) $(library).$(top_level) -do "run -a"
-	./scripts/return_status.sh $(buildpath)/transcript
+	./scripts/return_status.sh $(MEMPOOL_DIR)/results/$(app)_transcript.txt
 
 # DPIs
 .PHONY: dpi
@@ -315,9 +315,9 @@ $(VERILATOR_EXE): $(VERILATOR_MK) $(shell find $(VERILATOR_SRC) -type f) Makefil
 	make -j4 -C $(verilator_build) -f $<
 
 verilate: $(VERILATOR_EXE) $(buildpath) Makefile
-	cd $(buildpath) && $(VERILATOR_EXE) $(veril_flags) | tee transcript
+	cd $(buildpath) && $(VERILATOR_EXE) $(veril_flags) | tee $(MEMPOOL_DIR)/results/$(app)_transcript.txt
 	# Avoid capturing the return status when running the load-throughput analysis
-	if [ $(tg) -ne 1 ]; then ./scripts/return_status.sh $(buildpath)/transcript; fi
+	if [ $(tg) -ne 1 ]; then ./scripts/return_status.sh $(MEMPOOL_DIR)/results/$(app)_transcript.txt; fi
 
 #############
 # Lint      #
@@ -349,8 +349,8 @@ trace: pre_trace $(trace) post_trace
 log:
 	mkdir -p "$(result_dir)"
 	[ -e "$(preload)" ] && cp "$(preload)"* "$(result_dir)" || \
-	([ -e "$(buildpath)/transcript" ] && \
-	cp "$$(grep -oP '(?<=\+PRELOAD=)[^ \"]*' $(buildpath)/transcript)"* "$(result_dir)" || \
+	([ -e "$(MEMPOOL_DIR)/results/$(app)_transcript.txt" ] && \
+	cp "$$(grep -oP '(?<=\+PRELOAD=)[^ \"]*'$(MEMPOOL_DIR)/results/$(app)_transcript.txt)"* "$(result_dir)" || \
 	echo "No application specified")
 	env > "$(result_dir)/env"
 	cp $(MEMPOOL_DIR)/config/config.mk $(result_dir)/config
@@ -363,7 +363,7 @@ pre_trace:
 
 post_trace:
 	mkdir -p "$(result_dir)"
-	cp $(buildpath)/transcript "$(result_dir)/" | true
+	cp $(MEMPOOL_DIR)/results/$(app)_transcript.txt "$(result_dir)/" | true
 	cp $(traceresult) "$(result_dir)"
 	cp $(trace) "$(result_dir)"
 	$(python) $(ROOT_DIR)/scripts/gen_avg.py --folder "$(result_dir)" | tee $(result_dir)/avg.txt
@@ -395,12 +395,12 @@ $(tests_vsim): $(test_result_dir_vsim)/%.out : $(app_path)/%
 	mkdir -p $(test_result_dir_vsim)
 	cd $(buildpath) && \
 	$(questa_cmd) vsim -c $(questa_args) +PRELOAD=$< $(library).$(top_level) -do "run -a"
-	./scripts/return_status.sh $(buildpath)/transcript > $@
+	./scripts/return_status.sh $(MEMPOOL_DIR)/results/$(app)_transcript.txt > $@
 
 $(tests_verilate): $(test_result_dir_verilate)/%.out : $(app_path)/%
 	mkdir -p $(test_result_dir_verilate)
-	cd $(buildpath) && $(VERILATOR_EXE) --meminit=ram,$< | tee transcript
-	./scripts/return_status.sh $(buildpath)/transcript > $@
+	cd $(buildpath) && $(VERILATOR_EXE) --meminit=ram,$< | tee $(MEMPOOL_DIR)/results/$(app)_transcript.txt
+	./scripts/return_status.sh $(MEMPOOL_DIR)/results/$(app)_transcript.txt > $@
 
 ################
 # Helper       #
